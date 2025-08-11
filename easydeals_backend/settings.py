@@ -66,6 +66,10 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'storages',
+
+      # Local apps
+    'apps.users.apps.UsersConfig',      # ← Cambiar a esto
+    'apps.businesses.apps.BusinessesConfig',  # ← Cambiar a esto
 ]
 
 MIDDLEWARE = [
@@ -118,3 +122,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Custom User Model
+AUTH_USER_MODEL = 'users.User'
