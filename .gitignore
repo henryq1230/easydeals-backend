@@ -1,0 +1,57 @@
+# ---------------------
+# Python
+# ---------------------
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---------------------
+# Entorno virtual
+# ---------------------
+venv/
+.env
+*.env
+
+# ---------------------
+# Base de datos SQLite
+# ---------------------
+db.sqlite3
+
+# ---------------------
+# Archivos de logs
+# ---------------------
+*.log
+
+# ---------------------
+# Archivos temporales y cachés
+# ---------------------
+.DS_Store
+Thumbs.db
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+.eggs/
+.cache/
+.pytest_cache/
+
+# ---------------------
+# Archivos generados por Django
+# ---------------------
+staticfiles/
+media/
+
+# ---------------------
+# Configuración de IDEs
+# ---------------------
+.vscode/
+.idea/
+
+# ---------------------
+# Docker
+# ---------------------
+# Si generas archivos de build locales de Docker, ignóralos
+docker-compose.override.yml
