@@ -1,39 +1,52 @@
-"""
-URL configuration for easydeals_backend project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/4.2/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path, include 
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from django.http import JsonResponse
-# from apps.users import views  ← Quitar esta línea por ahora
 
 def health_check(request):
     return JsonResponse({
         'status': 'OK',
         'message': '🚀 EasyDeals Backend funcionando correctamente!',
         'version': '1.0',
-        'endpoints': [
-            '/admin/',
-            '/api/health/',
-            '/api/users/'
+        'endpoints': {
+            'admin': '/admin/',
+            'health': '/api/health/',
+            'users': '/api/users/',
+            'businesses': '/api/businesses/',
+            'orders': '/api/orders/',
+            'tracking': '/api/tracking/',
+            'payments': '/api/payments/',
+            'notifications': '/api/notifications/'
+        },
+        'features': [
+            'Autenticación con tokens',
+            'Registro y login de usuarios',
+            'Gestión de negocios y productos',
+            'Sistema de órdenes completo',
+            'Tracking en tiempo real',
+            'Pagos con Tilopay',
+            'Notificaciones push',
+            'Geolocalización'
         ]
     })
 
 urlpatterns = [
+    # Admin
     path('admin/', admin.site.urls),
-    path('', health_check),
+    
+    # Health check
     path('api/health/', health_check),
+    
+    # API endpoints
     path('api/users/', include('apps.users.urls')),
+    path('api/businesses/', include('apps.businesses.urls')),
+    path('api/orders/', include('apps.orders.urls')),
+    path('api/tracking/', include('apps.tracking.urls')),
+    path('api/payments/', include('apps.payments.urls')),
+    path('api/notifications/', include('apps.notifications.urls')),
 ]
+
+# Servir archivos de media en desarrollo
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
