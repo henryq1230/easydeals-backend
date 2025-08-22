@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from google.cloud import secretmanager
+from decouple import config 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -67,9 +68,14 @@ INSTALLED_APPS = [
     'django_filters',
     'storages',
 
-      # Local apps
-    'apps.users.apps.UsersConfig',      # ← Cambiar a esto
-    'apps.businesses.apps.BusinessesConfig',  # ← Cambiar a esto
+    # Local apps
+    'apps.users.apps.UsersConfig',
+    'apps.businesses.apps.BusinessesConfig',
+    'apps.orders.apps.OrdersConfig',
+    'apps.authentication.apps.AuthenticationConfig',
+    'apps.payments.apps.PaymentsConfig',
+    'apps.notifications.apps.NotificationsConfig',
+    'apps.tracking.apps.TrackingConfig',
 ]
 
 MIDDLEWARE = [
@@ -125,3 +131,14 @@ if not DEBUG:
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
+
+# Tilopay Configuration (usando os.environ)
+TILOPAY_BASE_URL = os.environ.get('TILOPAY_BASE_URL', 'https://api.tilopay.com')
+TILOPAY_API_KEY = os.environ.get('TILOPAY_API_KEY', '')
+TILOPAY_SECRET_KEY = os.environ.get('TILOPAY_SECRET_KEY', '')
+TILOPAY_PLATFORM_KEY = os.environ.get('TILOPAY_PLATFORM_KEY', '')
+TILOPAY_PLATFORM_SUBMERCHANT_KEY = os.environ.get('TILOPAY_PLATFORM_SUBMERCHANT_KEY', '')
+
+# URLs for redirects
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+BACKEND_URL = os.environ.get('BACKEND_URL', 'https://easydeals-backend-6b3hktb2rq-uc.a.run.app')
