@@ -51,7 +51,7 @@ else:
     }
 
 # Cloud Run provides the PORT environment variable
-PORT = int(os.environ.get('PORT', 8080))
+PORT = int(os.environ.get('PORT', 8000))
 
 ALLOWED_HOSTS = ['*']  # Cloud Run handles this
 
