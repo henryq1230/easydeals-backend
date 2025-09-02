@@ -51,7 +51,7 @@ else:
     }
 
 # Cloud Run provides the PORT environment variable
-PORT = int(os.environ.get('PORT', 8000))
+PORT = int(os.environ.get('PORT', 8080))
 
 ALLOWED_HOSTS = ['*']  # Cloud Run handles this
 
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken', 
     'corsheaders',
     'django_filters',
     'storages',
@@ -142,3 +143,9 @@ TILOPAY_PLATFORM_SUBMERCHANT_KEY = os.environ.get('TILOPAY_PLATFORM_SUBMERCHANT_
 # URLs for redirects
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 BACKEND_URL = os.environ.get('BACKEND_URL', 'https://easydeals-backend-6b3hktb2rq-uc.a.run.app')
+
+# Twilio Configuration
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER')
+TWILIO_WHATSAPP_NUMBER = os.environ.get('TWILIO_WHATSAPP_NUMBER')

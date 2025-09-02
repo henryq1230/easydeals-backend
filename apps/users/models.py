@@ -1,5 +1,10 @@
+# apps/users/models.py
+import random
+import string
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 import uuid
 
 class User(AbstractUser):
@@ -13,11 +18,47 @@ class User(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user_type = models.CharField(max_length=20, choices=USER_TYPES, default='client')
     phone = models.CharField(max_length=15, unique=True)
+    
+    # Campos para verificación de teléfono (NUEVOS CAMPOS)
+    phone_verification_code = models.CharField(max_length=6, blank=True, null=True)
+    phone_verification_code_expires = models.DateTimeField(blank=True, null=True)
     is_phone_verified = models.BooleanField(default=False)
+    
+    # Campo para método de verificación preferido (NUEVO CAMPO)
+    preferred_verification_method = models.CharField(
+        max_length=10, 
+        choices=[('sms', 'SMS'), ('whatsapp', 'WhatsApp')],
+        default='sms'
+    )
+    
     profile_image = models.ImageField(upload_to='profiles/', null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Métodos para verificación de teléfono (NUEVOS MÉTODOS)
+    def generate_phone_verification_code(self):
+        """Genera un código de verificación y lo almacena"""
+        from .services.messaging_service import MessagingService
+        code = MessagingService.generate_verification_code()
+        self.phone_verification_code = code
+        self.phone_verification_code_expires = timezone.now() + timedelta(minutes=10)
+        self.save(update_fields=['phone_verification_code', 'phone_verification_code_expires'])
+        return code
+
+    def verify_phone_code(self, code):
+        """Verifica si el código proporcionado es válido"""
+        if not self.phone_verification_code or not self.phone_verification_code_expires:
+            return False
+            
+        if (self.phone_verification_code == code and 
+            timezone.now() < self.phone_verification_code_expires):
+            self.is_phone_verified = True
+            self.phone_verification_code = None
+            self.phone_verification_code_expires = None
+            self.save(update_fields=['is_phone_verified', 'phone_verification_code', 'phone_verification_code_expires'])
+            return True
+        return False
     
     def __str__(self):
         return f"{self.username} - {self.get_user_type_display()}"

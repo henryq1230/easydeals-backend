@@ -24,22 +24,31 @@ class UserViewSet(viewsets.ModelViewSet):
         return User.objects.filter(id=self.request.user.id)
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
-    def register(self, request):
-        """Registrar nuevo usuario"""
-        serializer = UserCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
-            token, created = Token.objects.get_or_create(user=user)
-            
-            return Response({
-                'message': 'Usuario creado exitosamente. Verifica tu teléfono.',
-                'user_id': str(user.id),
-                'token': token.key,
-                'user_type': user.user_type,
-                'phone': user.phone
-            }, status=status.HTTP_201_CREATED)
+    def verify_phone(self, request):
+        """Verificar código de teléfono"""
+        phone = request.data.get('phone')
+        code = request.data.get('code')
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not phone or not code:
+            return Response({
+                'error': 'Teléfono y código son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(phone=phone)
+            if user.verify_phone_code(code):
+                return Response({
+                    'message': 'Teléfono verificado exitosamente',
+                    'user': UserSerializer(user).data
+                })
+            else:
+                return Response({
+                    'error': 'Código de verificación inválido o expirado'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def login(self, request):
@@ -65,6 +74,44 @@ class UserViewSet(viewsets.ModelViewSet):
             })
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def resend_verification_code(self, request):
+        """Reenviar código de verificación por el método preferido"""
+        phone = request.data.get('phone')
+        method = request.data.get('method', 'sms') # 'sms' o 'whatsapp'
+        
+        if not phone:
+            return Response({'error': 'Teléfono es requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            user = User.objects.get(phone=phone)
+            if user.is_phone_verified:
+                return Response({'message': 'Teléfono ya verificado'})
+            
+            # Actualizar método preferido si se especifica
+            if method in ['sms', 'whatsapp']:
+                user.preferred_verification_method = method
+                user.save(update_fields=['preferred_verification_method'])
+            
+            # Generar nuevo código
+            verification_code = user.generate_phone_verification_code()
+            
+            # Enviar código
+            messaging_service = MessagingService()
+            if method == 'whatsapp':
+                success = messaging_service.send_whatsapp_verification(user.phone, verification_code)
+            else:
+                success = messaging_service.send_sms_verification(user.phone, verification_code)
+                
+            if success:
+                return Response({'message': 'Código de verificación reenviado exitosamente'})
+            else:
+                return Response({'error': 'Error al enviar el código de verificación'}, 
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+        except User.DoesNotExist:
+            return Response({'error': 'Usuario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=False, methods=['get', 'patch'])
     def profile(self, request):

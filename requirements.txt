@@ -10,3 +10,4 @@ google-cloud-storage==2.10.0
 google-cloud-secret-manager==2.16.4
 django-storages[google]==1.14.2
 Pillow==10.1.0
+twilio==8.10.0

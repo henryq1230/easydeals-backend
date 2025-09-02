@@ -29,4 +29,4 @@ RUN python manage.py collectstatic --noinput --clear
 EXPOSE $PORT
 
 # Comando para ejecutar la aplicación
-CMD "exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 easydeals_backend.wsgi:application"
+CMD ["sh", "-c", "gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 easydeals_backend.wsgi:application"]
