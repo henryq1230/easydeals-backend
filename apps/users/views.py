@@ -1,7 +1,9 @@
+# apps/users/views.py
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import serializers
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import login
 from rest_framework.authtoken.models import Token
@@ -10,6 +12,8 @@ from .serializers import (
     UserProfileSerializer, UserCreateSerializer, LoginSerializer,
     AddressSerializer, DriverProfileSerializer
 )
+# Importar el servicio de mensajería
+from .services.messaging_service import MessagingService  # <-- CORRECCIÓN 1: Importar el servicio
 
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserProfileSerializer
@@ -22,6 +26,43 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.request.user.user_type == 'admin':
             return User.objects.all()
         return User.objects.filter(id=self.request.user.id)
+    
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def register(self, request):
+        """Registrar nuevo usuario"""
+        serializer = UserCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                user = serializer.save()
+                token, created = Token.objects.get_or_create(user=user)
+                
+                # Generar código de verificación
+                verification_code = user.generate_phone_verification_code()
+                
+                # Enviar código por el método preferido del usuario
+                messaging_service = MessagingService()  # <-- CORRECCIÓN 2: Usar el servicio importado
+                method = request.data.get('preferred_verification_method', 'sms')
+                success = messaging_service.send_verification_code(user.phone, verification_code, method)
+                
+                if success:
+                    print(f"Verification code sent to {user.phone} via {method}")
+                else:
+                    print(f"Failed to send verification code to {user.phone}")
+                
+                return Response({
+                    'message': 'Usuario creado exitosamente. Verifica tu teléfono.',
+                    'user_id': str(user.id),
+                    'token': token.key,
+                    'user_type': user.user_type,
+                    'phone': user.phone
+                }, status=status.HTTP_201_CREATED)
+                
+            except Exception as e:
+                return Response({
+                    'error': f'Error al crear usuario: {str(e)}'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def verify_phone(self, request):
@@ -39,7 +80,7 @@ class UserViewSet(viewsets.ModelViewSet):
             if user.verify_phone_code(code):
                 return Response({
                     'message': 'Teléfono verificado exitosamente',
-                    'user': UserSerializer(user).data
+                    'user': UserProfileSerializer(user).data
                 })
             else:
                 return Response({
@@ -57,6 +98,7 @@ class UserViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             
+            # Verificar que el teléfono esté verificado
             if not user.is_phone_verified:
                 return Response({
                     'error': 'Teléfono no verificado',
@@ -79,7 +121,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def resend_verification_code(self, request):
         """Reenviar código de verificación por el método preferido"""
         phone = request.data.get('phone')
-        method = request.data.get('method', 'sms') # 'sms' o 'whatsapp'
+        method = request.data.get('method', 'sms')  # 'sms' o 'whatsapp'
         
         if not phone:
             return Response({'error': 'Teléfono es requerido'}, status=status.HTTP_400_BAD_REQUEST)
@@ -97,15 +139,12 @@ class UserViewSet(viewsets.ModelViewSet):
             # Generar nuevo código
             verification_code = user.generate_phone_verification_code()
             
-            # Enviar código
-            messaging_service = MessagingService()
-            if method == 'whatsapp':
-                success = messaging_service.send_whatsapp_verification(user.phone, verification_code)
-            else:
-                success = messaging_service.send_sms_verification(user.phone, verification_code)
+            # Enviar código usando el servicio de mensajería
+            messaging_service = MessagingService()  # <-- CORRECCIÓN 3: Usar el servicio importado
+            success = messaging_service.send_verification_code(user.phone, verification_code, method)
                 
             if success:
-                return Response({'message': 'Código de verificación reenviado exitosamente'})
+                return Response({'message': f'Código de verificación reenviado exitosamente por {method}'})
             else:
                 return Response({'error': 'Error al enviar el código de verificación'}, 
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -132,8 +171,8 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False, methods=['post'])
-    def verify_phone(self, request):
-        """Verificar teléfono con código SMS"""
+    def verify_phone_code(self, request):
+        """Verificar teléfono con código SMS - Endpoint específico para verificación"""
         phone = request.data.get('phone')
         code = request.data.get('code')
         
@@ -142,25 +181,21 @@ class UserViewSet(viewsets.ModelViewSet):
                 'error': 'Teléfono y código son requeridos'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # Aquí integrarías con servicio SMS real
-        # Por ahora, código de prueba: 123456
-        if code == '123456':
-            try:
-                user = User.objects.get(phone=phone)
-                user.is_phone_verified = True
-                user.save()
-                
+        try:
+            user = User.objects.get(phone=phone)
+            if user.verify_phone_code(code):
                 return Response({
-                    'message': 'Teléfono verificado exitosamente'
+                    'message': 'Teléfono verificado exitosamente',
+                    'user': UserProfileSerializer(user).data
                 })
-            except User.DoesNotExist:
+            else:
                 return Response({
-                    'error': 'Usuario no encontrado'
-                }, status=status.HTTP_404_NOT_FOUND)
-        else:
+                    'error': 'Código de verificación inválido o expirado'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        except User.DoesNotExist:
             return Response({
-                'error': 'Código de verificación inválido'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'error': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
 
 class AddressViewSet(viewsets.ModelViewSet):
     serializer_class = AddressSerializer

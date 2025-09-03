@@ -130,6 +130,10 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
+    # Añade estas líneas recomendadas para HTTPS en Cloud Run
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
@@ -142,7 +146,7 @@ TILOPAY_PLATFORM_SUBMERCHANT_KEY = os.environ.get('TILOPAY_PLATFORM_SUBMERCHANT_
 
 # URLs for redirects
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-BACKEND_URL = os.environ.get('BACKEND_URL', 'https://easydeals-backend-6b3hktb2rq-uc.a.run.app')
+BACKEND_URL = os.environ.get('BACKEND_URL', 'https://easydeals-backend-241687594167.us-central1.run.app')
 
 # Twilio Configuration
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
