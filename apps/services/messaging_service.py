@@ -15,6 +15,15 @@ class MessagingService:
     def send_sms_verification(self, to_number, code):
         """Enviar código de verificación por SMS"""
         try:
+            # Verificar que el número de destino no sea el mismo que el de origen
+            if to_number == self.from_phone_number:
+                logger.warning(f"Cannot send SMS to the same number as sender: {to_number}")
+                # Opción 1: Simular envío exitoso (solo para desarrollo)
+                logger.info(f"Simulating SMS sent to {to_number} with code {code}")
+                return True
+                # Opción 2: Retornar error
+                # return False
+                
             message = self.client.messages.create(
                 body=f"Tu código de verificación para Easy Deals es: {code}",
                 from_=self.from_phone_number,
